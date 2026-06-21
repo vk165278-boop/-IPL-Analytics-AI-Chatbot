@@ -1,0 +1,242 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ipl-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -464,
+        16
+      ],
+      "id": "01b2b2df-d95d-45fa-8c62-05138212a6ce",
+      "name": "Webhook",
+      "webhookId": "a7e1cf9a-7f1d-4631-b78f-6e3cd8fb0019"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6f796608-72d1-4c6c-b37b-5642e2690aa6",
+              "name": "prompt",
+              "value": "={{$json.body.query}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -304,
+        -160
+      ],
+      "id": "20fd7751-0259-4a03-93b5-e28f22cea706",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ \"You are an IPL Analytics Expert. Explain this result in simple English:\\n\\n\" + JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        304,
+        -96
+      ],
+      "id": "807bc920-32dd-4df6-bd68-180d509c9637",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        272,
+        112
+      ],
+      "id": "260cb82c-40a7-4ff7-bec7-d19473968c8b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YA7TIN6GSlFyxjwE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"answer\": $json.output } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        512,
+        128
+      ],
+      "id": "b9b6a5fe-5316-42c0-a77f-9cb337912c90",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.output }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -48,
+        112
+      ],
+      "id": "944336a8-bc92-4042-ba79-1c17bbbb225e",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "CaELW8QrGunNs2oI",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{`\nYou are a PostgreSQL SQL expert.\n\nDatabase table: final_table\n\nIMPORTANT DATA RULES:\n\n- final_table is a ball-by-ball IPL dataset.\n- Each match contains many rows.\n- match_id uniquely identifies a match.\n- winner is repeated across multiple rows of the same match.\n- player_of_match is repeated across multiple rows of the same match.\n- For match-level statistics, use COUNT(DISTINCT match_id).\n- Never use COUNT(*) for match-level counts.\n- batter contains batter name.\n- bowler contains bowler name.\n- batsman_runs contains runs scored by the batter on a ball.\n- total_runs contains total runs scored on a ball including extras.\n\nIMPORTANT SQL TYPE RULES:\n\n- season column is VARCHAR(10).\n- Always compare season values as strings.\n- Correct:\n  WHERE season = '2024'\n- Wrong:\n  WHERE season = 2024\n\n- city, venue, batter, bowler, winner, player_of_match, team1, team2, toss_winner, toss_decision and match_type are text columns.\n- Text values must always be enclosed in single quotes.\n\nColumns:\nmatch_id,\ninning,\nover,\nball,\nbatter,\nbowler,\nnon_striker,\nbatsman_runs,\nextra_runs,\ntotal_runs,\nextras_type,\nseason,\ncity,\ndate,\nmatch_type,\nplayer_of_match,\nvenue,\nteam1,\nteam2,\ntoss_winner,\ntoss_decision,\nwinner,\nresult,\nresult_margin,\ntarget_runs,\ntarget_overs,\nsuper_over,\numpire1,\numpire2\n\nExamples:\n\nQuestion:\nWhich team won the most matches?\n\nSQL:\nSELECT winner,\nCOUNT(DISTINCT match_id) AS wins\nFROM final_table\nWHERE winner IS NOT NULL\nGROUP BY winner\nORDER BY wins DESC\nLIMIT 1;\n\nQuestion:\nWho won the most Player of the Match awards?\n\nSQL:\nSELECT player_of_match,\nCOUNT(DISTINCT match_id) AS awards_count\nFROM final_table\nWHERE player_of_match IS NOT NULL\nGROUP BY player_of_match\nORDER BY awards_count DESC\nLIMIT 1;\n\nQuestion:\nWho scored the most runs?\n\nSQL:\nSELECT batter,\nSUM(batsman_runs) AS total_runs\nFROM final_table\nGROUP BY batter\nORDER BY total_runs DESC\nLIMIT 1;\n\nQuestion:\nWho scored the most runs in IPL 2024?\n\nSQL:\nSELECT batter,\nSUM(batsman_runs) AS total_runs\nFROM final_table\nWHERE season = '2024'\nGROUP BY batter\nORDER BY total_runs DESC\nLIMIT 1;\n\nQuestion:\nWhich batter hit the most sixes?\n\nSQL:\nSELECT batter,\nCOUNT(*) AS sixes\nFROM final_table\nWHERE batsman_runs = 6\nGROUP BY batter\nORDER BY sixes DESC\nLIMIT 1;\n\nRules:\n- Generate only PostgreSQL SELECT queries.\n- Never generate INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE.\n- Return only raw SQL.\n- No explanations.\n- No markdown.\n- No code blocks.\n- Return only the SQL query text.\n- Use PostgreSQL syntax only.\n- Use COUNT(DISTINCT match_id) for match-level statistics.\n- Text values must be enclosed in single quotes.\n\nQuestion:\n${$json.prompt}\n`}}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -96,
+        -144
+      ],
+      "id": "4a13cb30-8e46-43c9-9605-d79bbd06f086",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        16
+      ],
+      "id": "32db1b69-e41e-4b7d-a493-1bf7f79baad7",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YA7TIN6GSlFyxjwE",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b1703397-8191-4eab-bd89-b2b248110ace",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fbc008989cbae410ff1a0150c26645411efd63993bb6dc9758fd0f5c725c8899"
+  },
+  "id": "gGE4MDVv65LsnDJf",
+  "tags": []
+}
