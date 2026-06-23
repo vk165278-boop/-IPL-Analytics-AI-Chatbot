@@ -4,7 +4,8 @@ I made a  IPL data project to explore ball-by-ball data and try simple predictio
 
 ## Overview
 
-This is a project with EDA and basic models to learn from IPL match data.
+This is a project with data cleaning , EDA and basic models to learn from IPL match data.
+hand on with AI chatbot to answers the question in normal language.  
 
 ## Problem
 
@@ -26,7 +27,7 @@ I looked at ball-by-ball data to find which things affect match results.
 - Built a basic model and checked scores
 
 ## Main findings (short)
-
+exmaples : 
 - Top features: (e.g., runs in last 6 balls, wickets)
 - Some teams/players show consistent patterns
 
