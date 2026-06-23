@@ -1,6 +1,5 @@
 ##Project Title
 I made a  IPL data project to explore ball-by-ball data and try simple predictions.
-
 ##Overview
 This is a  project with EDA and basic models to learn from IPL match data.
 
